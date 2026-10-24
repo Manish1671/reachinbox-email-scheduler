@@ -1,0 +1,46 @@
+{
+  "name": "backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "worker": "tsx watch src/workers/index.ts",
+    "ethereal:create": "tsx scripts/create-ethereal-account.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "start:worker": "node dist/workers/index.js",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test --test-concurrency=1 --test-force-exit src/validation/auth.schema.test.ts src/validation/email.schema.test.ts src/utils/jwt.test.ts src/utils/password.test.ts src/queue/email.queue.test.ts src/services/auth.service.test.ts src/services/email.access.test.ts src/services/email.service.test.ts src/services/email-delivery.service.test.ts src/services/email-processing.service.test.ts src/services/email-reconciliation.service.test.ts src/routes/emails.http.test.ts src/workers/email.processor.test.ts src/workers/email.worker.test.ts src/workers/email.worker.reliability.test.ts",
+    "prisma:generate": "prisma generate --schema ../../prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema ../../prisma/schema.prisma",
+    "prisma:studio": "prisma studio --schema ../../prisma/schema.prisma"
+  },
+  "prisma": {
+    "schema": "../../prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.15.0",
+    "bcrypt": "^6.0.0",
+    "bullmq": "^5.58.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "ioredis": "^5.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
+    "nodemailer": "^7.0.6",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.23",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.3.1",
+    "@types/nodemailer": "^7.0.1",
+    "prisma": "^6.15.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

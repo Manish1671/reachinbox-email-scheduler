@@ -1,0 +1,33 @@
+{
+  "name": "outbox-email-scheduler",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Production-minded email scheduling application for the Outbox Labs technical assignment.",
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "worker": "npm run worker -w backend",
+    "ethereal:create": "npm run ethereal:create -w backend",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test -w backend && npm run test -w frontend",
+    "format": "prettier --write .",
+    "prisma:generate": "npm run prisma:generate -w backend",
+    "prisma:migrate": "npm run prisma:migrate -w backend",
+    "prisma:studio": "npm run prisma:studio -w backend",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "prettier": "^3.5.3"
+  }
+}

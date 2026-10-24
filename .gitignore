@@ -1,0 +1,21 @@
+node_modules
+dist
+build
+coverage
+.env
+.env.local
+.env.*.local
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.tsbuildinfo
+apps/frontend/dist
+apps/backend/dist
+
+# Environment secrets
+.env.*
+!.env.example
