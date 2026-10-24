@@ -15,33 +15,68 @@ enum EmailStatus {
   FAILED
 }
 
+enum CampaignStatus {
+  SCHEDULED
+  QUEUED
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String          @id @default(uuid())
+  email        String          @unique
   passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
   emails       Email[]
+  campaigns    EmailCampaign[]
+}
+
+model EmailCampaign {
+  id             String         @id @default(uuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject        String
+  body           String
+  startAt        DateTime
+  minDelayMs     Int
+  hourlyQuota    Int
+  status         CampaignStatus @default(SCHEDULED)
+  idempotencyKey String?
+  recipientCount Int
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  emails         Email[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId])
+  @@index([userId, createdAt])
 }
 
 model Email {
-  id                String      @id @default(uuid())
+  id                String         @id @default(uuid())
   userId            String
-  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignId        String?
+  campaign          EmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  sequenceIndex     Int?
   recipient         String
   subject           String
   body              String
-  status            EmailStatus @default(SCHEDULED)
+  status            EmailStatus    @default(SCHEDULED)
   scheduledAt       DateTime
   sentAt            DateTime?
   failureReason     String?
   providerMessageId String?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   @@index([userId])
   @@index([status])
   @@index([scheduledAt])
   @@index([userId, status])
   @@index([status, scheduledAt])
+  @@index([campaignId])
+  @@index([campaignId, sequenceIndex])
 }

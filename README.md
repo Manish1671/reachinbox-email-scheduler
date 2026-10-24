@@ -13,6 +13,7 @@ An authenticated user can register, log in, compose a plain-text email, schedule
 - Registration, login, JWT sessions, and `GET /api/auth/me`
 - Per-user email ownership (backend-enforced)
 - Compose and schedule emails for a future instant
+- Bulk **campaign** scheduling from CSV or plain-text recipient lists (staggered sends, hourly quota stored for Phase 2)
 - Delayed BullMQ jobs (`jobId = email.id`, payload `{ emailId }` only)
 - Independent worker with Nodemailer / Ethereal delivery
 - Atomic `QUEUED → PROCESSING` claim; `SENT` / `FAILED` outcomes
@@ -174,10 +175,35 @@ On Windows PowerShell: `Copy-Item .env.example .env`.
 | `GET` | `/api/emails/scheduled` | Bearer (`SCHEDULED` + `QUEUED`) |
 | `GET` | `/api/emails/sent` | Bearer |
 | `GET` | `/api/emails/:id` | Bearer; ownership-scoped |
+| `POST` | `/api/campaigns` | Bearer |
+| `GET` | `/api/campaigns` | Bearer; `?limit=` |
+| `GET` | `/api/campaigns/:id` | Bearer; ownership-scoped |
 
 There is no dedicated `/failed` path. The dashboard Failed table uses `GET /api/emails?status=FAILED`. `providerMessageId` is stored on the row in PostgreSQL; it is not returned in the public JSON. Preview URLs are worker logs only.
 
 Create body: `{ recipient, subject, body, scheduledAt }` — never `userId`.
+
+### Campaign scheduling (Phase 1)
+
+`POST /api/campaigns` body:
+
+```json
+{
+  "subject": "Hello",
+  "body": "Plain-text body",
+  "startAt": "2030-06-01T10:00:00.000Z",
+  "minDelayMs": 5000,
+  "hourlyQuota": 200,
+  "recipients": "one@example.com\ntwo@example.com",
+  "idempotencyKey": "optional-client-key"
+}
+```
+
+- `recipients` is server-parsed CSV or newline-separated text (trimmed, deduplicated, validated). Max payload **2 MB**; max **5,000** unique addresses.
+- Each recipient becomes an `Email` row with `campaignId`, `sequenceIndex`, and `scheduledAt = startAt + index * minDelayMs`.
+- BullMQ `jobId` remains the email row id. Reconciliation recovers `SCHEDULED` rows after enqueue failures.
+- `hourlyQuota` is persisted and validated but **not enforced** until Phase 2 (shared Redis limiter).
+- Repeat `POST` with the same `idempotencyKey` for a user returns the existing campaign and only enqueues still-`SCHEDULED` child emails (no duplicate rows).
 
 ## Project structure
 
@@ -201,7 +227,7 @@ npm run test
 npm run build
 ```
 
-Backend tests cover auth, email API, ownership, queue delay math, worker processor, reconciliation, concurrency, and rate limiting (with a test limiter). Frontend tests cover local datetime → ISO conversion and API error mapping.
+Backend tests cover auth, email and campaign APIs, recipient parsing, ownership, queue delay math, worker processor, reconciliation, concurrency, and rate limiting (with a test limiter). Integration tests require PostgreSQL and Redis (`npm run docker:up`). Frontend tests cover local datetime → ISO conversion and API error mapping.
 
 ## Demo scenario
 
@@ -217,7 +243,7 @@ Backend tests cover auth, email API, ownership, queue delay math, worker process
 - SMTP delivery is **at-least-once**. A crash after Ethereal accepts the message and before `SENT` can cause a duplicate on recovery. There is no exactly-once guarantee.
 - JWT in `localStorage` is appropriate for this assignment, not a hardened cookie/session design.
 - Stale `PROCESSING` uses `updatedAt` vs `EMAIL_PROCESSING_TIMEOUT_MS`. A send slower than that timeout is still protected if the BullMQ job remains `active`.
-- No recurring schedules, cancellation, campaigns, contacts, or production providers (Gmail, etc.).
+- No recurring schedules, cancellation, hourly quota enforcement (stored only), contacts, or production providers (Gmail, etc.).
 - `.env` reliability keys may be omitted; Zod supplies the documented defaults.
 
 ## Assignment requirement mapping

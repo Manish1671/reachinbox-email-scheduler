@@ -8,6 +8,12 @@ export function mapApiError(status?: number, code?: string): string | null {
   if (code === 'QUEUE_ENQUEUE_FAILED') {
     return 'Your email was saved but could not be queued yet. Please try again later.';
   }
+  if (code === 'RECIPIENTS_EMPTY') {
+    return 'Add at least one valid recipient address.';
+  }
+  if (code === 'RECIPIENTS_TOO_LARGE' || code === 'RECIPIENTS_TOO_MANY') {
+    return 'The recipient list is too large. Remove some addresses and try again.';
+  }
   if (code === 'EMAIL_IN_USE') {
     return 'This email is already registered.';
   }

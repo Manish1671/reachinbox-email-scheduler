@@ -9,6 +9,8 @@ export type ScheduledEmail = {
   scheduledAt: string;
   sentAt: string | null;
   failureReason: string | null;
+  campaignId: string | null;
+  sequenceIndex: number | null;
   createdAt: string;
   updatedAt: string;
 };

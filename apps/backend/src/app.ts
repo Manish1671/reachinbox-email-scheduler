@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import morgan from 'morgan';
-import { API_PREFIX } from './config/constants';
+import { API_PREFIX, CAMPAIGN_RECIPIENTS_MAX_BYTES } from './config/constants';
 import { getCorsOrigins } from './config/cors';
 import { env } from './config/env';
 import { errorHandler } from './middleware/error-handler';
@@ -18,7 +18,7 @@ export function createApp() {
       credentials: true,
     }),
   );
-  app.use(express.json());
+  app.use(express.json({ limit: `${CAMPAIGN_RECIPIENTS_MAX_BYTES}b` }));
 
   if (env.NODE_ENV !== 'test') {
     app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));

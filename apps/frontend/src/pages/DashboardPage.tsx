@@ -1,10 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '../components/Button';
+import { CampaignStatusBadge } from '../components/CampaignStatusBadge';
 import { EmailStatusCell, EmailTable, Truncate, type EmailTableColumn } from '../components/EmailTable';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { TableSkeleton } from '../components/TableSkeleton';
+import { useCampaigns } from '../hooks/useCampaigns';
 import { useDashboardEmails } from '../hooks/useDashboardEmails';
+import type { EmailCampaign } from '../types/campaign';
 import type { ScheduledEmail } from '../types/email';
 import { formatScheduledAt, formatSentAt } from '../utils/datetime';
 
@@ -89,9 +92,58 @@ function Section({
   );
 }
 
+function CampaignTable({
+  campaigns,
+  caption,
+}: {
+  campaigns: EmailCampaign[];
+  caption: string;
+}) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <caption className="sr-only">{caption}</caption>
+        <thead className="bg-slate-50 text-left text-slate-600">
+          <tr>
+            <th className="px-4 py-3 font-medium">Subject</th>
+            <th className="px-4 py-3 font-medium">Recipients</th>
+            <th className="px-4 py-3 font-medium">Starts</th>
+            <th className="px-4 py-3 font-medium">Progress</th>
+            <th className="px-4 py-3 font-medium">Status</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100 text-slate-900">
+          {campaigns.map((campaign) => (
+            <tr key={campaign.id}>
+              <td className="px-4 py-3">
+                <Truncate>{campaign.subject}</Truncate>
+              </td>
+              <td className="px-4 py-3">{campaign.recipientCount}</td>
+              <td className="px-4 py-3">{formatScheduledAt(campaign.startAt)}</td>
+              <td className="px-4 py-3 text-slate-600">
+                {campaign.stats.sent}/{campaign.stats.total} sent
+                {campaign.stats.failed > 0 ? ` · ${campaign.stats.failed} failed` : ''}
+              </td>
+              <td className="px-4 py-3">
+                <CampaignStatusBadge status={campaign.status} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const location = useLocation();
   const { data, loading, error, refresh } = useDashboardEmails();
+  const {
+    campaigns,
+    loading: campaignsLoading,
+    error: campaignsError,
+    refresh: refreshCampaigns,
+  } = useCampaigns();
   const successMessage =
     typeof location.state === 'object' &&
     location.state !== null &&
@@ -112,7 +164,14 @@ export function DashboardPage() {
           <p className="mt-1 text-sm text-slate-600">Review scheduled, sent, and failed deliveries.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => void refresh()} disabled={loading}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void refresh();
+              void refreshCampaigns();
+            }}
+            disabled={loading || campaignsLoading}
+          >
             Refresh
           </Button>
           <ComposeLink />
@@ -137,6 +196,26 @@ export function DashboardPage() {
           </div>
         ))}
       </dl>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-slate-900">Campaigns</h2>
+        <div className="mt-4">
+          {campaignsLoading ? <TableSkeleton columns={5} /> : null}
+          {!campaignsLoading && campaignsError ? (
+            <ErrorState message={campaignsError} onRetry={() => void refreshCampaigns()} />
+          ) : null}
+          {!campaignsLoading && !campaignsError && campaigns.length === 0 ? (
+            <EmptyState
+              title="No campaigns yet."
+              description="Upload a recipient list on the Compose page to schedule a staggered campaign."
+              action={<ComposeLink />}
+            />
+          ) : null}
+          {!campaignsLoading && !campaignsError && campaigns.length > 0 ? (
+            <CampaignTable campaigns={campaigns} caption="Email campaigns" />
+          ) : null}
+        </div>
+      </section>
 
       <Section
         title="Scheduled emails"

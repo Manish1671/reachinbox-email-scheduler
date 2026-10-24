@@ -11,6 +11,8 @@ export function toPublicEmail(email: Email): PublicEmail {
     scheduledAt: email.scheduledAt.toISOString(),
     sentAt: email.sentAt ? email.sentAt.toISOString() : null,
     failureReason: email.failureReason,
+    campaignId: email.campaignId,
+    sequenceIndex: email.sequenceIndex,
     createdAt: email.createdAt.toISOString(),
     updatedAt: email.updatedAt.toISOString(),
   };
