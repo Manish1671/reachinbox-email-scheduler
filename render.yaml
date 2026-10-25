@@ -1,0 +1,135 @@
+# Render Blueprint — reachinbox-email-scheduler (monorepo root)
+# Dashboard: New > Blueprint > connect this repo > apply.
+# Set ETHEREAL_USER and ETHEREAL_PASS manually (sync: false) after create.
+
+databases:
+  - name: reachinbox-postgres
+    plan: free
+    databaseName: outbox_email_scheduler
+    user: outbox
+
+services:
+  - type: keyvalue
+    name: reachinbox-redis
+    plan: free
+    maxmemoryPolicy: allkeys_lru
+    ipAllowList: []
+
+  - type: web
+    name: reachinbox-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run prisma:generate -w backend && npm run build -w backend
+    preDeployCommand: npm run prisma:deploy -w backend
+    startCommand: npm run start -w backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reachinbox-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: reachinbox-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CREDENTIALS_ENCRYPTION_KEY
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: reachinbox-frontend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: ETHEREAL_HOST
+        value: smtp.ethereal.email
+      - key: ETHEREAL_PORT
+        value: "587"
+      - key: ETHEREAL_SECURE
+        value: "false"
+      - key: MAIL_FROM
+        value: Outbox Scheduler <no-reply@ethereal.email>
+      - key: ELASTICSEARCH_ENABLED
+        value: "false"
+      - key: ETHEREAL_USER
+        sync: false
+      - key: ETHEREAL_PASS
+        sync: false
+
+  - type: worker
+    name: reachinbox-worker
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run prisma:generate -w backend && npm run build -w backend
+    preDeployCommand: npm run prisma:deploy -w backend
+    startCommand: npm run start:worker -w backend
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reachinbox-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: reachinbox-redis
+          property: connectionString
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: reachinbox-api
+          envVarKey: JWT_SECRET
+      - key: CREDENTIALS_ENCRYPTION_KEY
+        fromService:
+          type: web
+          name: reachinbox-api
+          envVarKey: CREDENTIALS_ENCRYPTION_KEY
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: reachinbox-frontend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: ETHEREAL_HOST
+        value: smtp.ethereal.email
+      - key: ETHEREAL_PORT
+        value: "587"
+      - key: ETHEREAL_SECURE
+        value: "false"
+      - key: MAIL_FROM
+        value: Outbox Scheduler <no-reply@ethereal.email>
+      - key: ELASTICSEARCH_ENABLED
+        value: "false"
+      - key: ETHEREAL_USER
+        sync: false
+      - key: ETHEREAL_PASS
+        sync: false
+
+  - type: web
+    name: reachinbox-frontend
+    runtime: static
+    buildCommand: npm ci && npm run build -w frontend
+    staticPublishPath: apps/frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: reachinbox-api
+          envVarKey: RENDER_EXTERNAL_URL
