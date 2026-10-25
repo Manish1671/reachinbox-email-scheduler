@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getFailedEmails, getScheduledEmails, getSentEmails } from '../services/emails';
+import {
+  getFailedEmails,
+  getProcessingEmails,
+  getScheduledEmails,
+  getSentEmails,
+} from '../services/emails';
 import type { ScheduledEmail } from '../types/email';
 import { getApiErrorMessage } from '../utils/api-errors';
 
 export type DashboardData = {
   scheduled: ScheduledEmail[];
+  processing: ScheduledEmail[];
   sent: ScheduledEmail[];
   failed: ScheduledEmail[];
 };
@@ -24,12 +30,13 @@ export function useDashboardEmails(): DashboardState & { refresh: () => Promise<
     setLoading(true);
     setError(null);
     try {
-      const [scheduled, sent, failed] = await Promise.all([
+      const [scheduled, processing, sent, failed] = await Promise.all([
         getScheduledEmails(),
+        getProcessingEmails(),
         getSentEmails(),
         getFailedEmails(),
       ]);
-      setData({ scheduled, sent, failed });
+      setData({ scheduled, processing, sent, failed });
     } catch (loadError) {
       setError(getApiErrorMessage(loadError));
     } finally {

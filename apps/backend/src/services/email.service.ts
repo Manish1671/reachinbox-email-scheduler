@@ -7,6 +7,7 @@ import { AppError } from '../utils/app-error';
 import { logger } from '../utils/logger';
 import { toPublicEmail } from '../utils/public-email';
 import { getEmailByIdForUser } from './email.access';
+import { scheduleEmailSearchIndex } from './email-search-index.service';
 
 export type CreateScheduledEmailInput = {
   recipient: string;
@@ -65,6 +66,8 @@ export async function createScheduledEmail(
     scheduledAt: queued.scheduledAt.toISOString(),
     delayMs: emailQueue.calculateJobDelayMs(queued.scheduledAt),
   });
+
+  scheduleEmailSearchIndex(queued.id);
 
   return toPublicEmail(queued);
 }

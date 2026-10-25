@@ -3,13 +3,21 @@ import { env } from './config/env';
 import { connectDatabase, disconnectDatabase } from './db/prisma';
 import { closeEmailQueue } from './queue/email.queue';
 import { connectRedis, disconnectRedis } from './queue/redis';
+import { processEmailSearchOutbox } from './services/email-search-index.service';
 import { logger } from './utils/logger';
+
+const SEARCH_OUTBOX_INTERVAL_MS = 30_000;
 
 async function start(): Promise<void> {
   await connectDatabase();
   await connectRedis();
 
   const app = createApp();
+  const searchOutboxTimer = setInterval(() => {
+    void processEmailSearchOutbox().catch((error: unknown) => {
+      logger.warn('[search] outbox processor failed', { error });
+    });
+  }, SEARCH_OUTBOX_INTERVAL_MS);
   const server = app.listen(env.PORT, () => {
     logger.info('API server listening', { port: env.PORT, env: env.NODE_ENV });
   });
@@ -30,6 +38,7 @@ async function start(): Promise<void> {
     });
 
     try {
+      clearInterval(searchOutboxTimer);
       await closeEmailQueue();
       await disconnectRedis();
       await disconnectDatabase();

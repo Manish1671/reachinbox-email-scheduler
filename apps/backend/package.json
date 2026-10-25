@@ -10,15 +10,19 @@
     "start": "node dist/server.js",
     "start:worker": "node dist/workers/index.js",
     "lint": "tsc --noEmit -p tsconfig.json",
-    "test": "tsx --test --test-concurrency=1 --test-force-exit src/validation/auth.schema.test.ts src/validation/email.schema.test.ts src/validation/campaign.schema.test.ts src/utils/jwt.test.ts src/utils/password.test.ts src/utils/campaign-recipients.test.ts src/utils/campaign-schedule.test.ts src/queue/email.queue.test.ts src/services/auth.service.test.ts src/services/email.access.test.ts src/services/email.service.test.ts src/services/campaign.service.test.ts src/services/email-delivery.service.test.ts src/services/email-processing.service.test.ts src/services/email-reconciliation.service.test.ts src/routes/emails.http.test.ts src/routes/campaigns.http.test.ts src/workers/email.processor.test.ts src/workers/email.worker.test.ts src/workers/email.worker.reliability.test.ts",
+    "test": "tsx --test --test-concurrency=1 --test-force-exit src/validation/auth.schema.test.ts src/validation/email.schema.test.ts src/validation/email-search.schema.test.ts src/validation/campaign.schema.test.ts src/utils/jwt.test.ts src/utils/password.test.ts src/utils/secret-cipher.test.ts src/utils/campaign-recipients.test.ts src/utils/campaign-schedule.test.ts src/search/email-index-document.test.ts src/redis/quota-hour.test.ts src/redis/quota-lua.integration.test.ts src/redis/min-delay.integration.test.ts src/services/send-orchestration.defer.test.ts src/queue/connection.test.ts src/queue/email.queue.test.ts src/queue/queue-dashboard.test.ts src/services/auth.service.test.ts src/services/google-auth.service.test.ts src/services/google-exchange-redis.test.ts src/services/google-id-token.test.ts src/services/email-search.service.test.ts src/routes/queue-dashboard.http.test.ts src/services/email.access.test.ts src/services/email.service.test.ts src/services/campaign.service.test.ts src/services/slack-oauth.service.test.ts src/services/email-delivery.service.test.ts src/services/email-processing.service.test.ts src/services/email-reconciliation.service.test.ts src/routes/emails.http.test.ts src/routes/campaigns.http.test.ts src/workers/email.processor.test.ts src/workers/email.worker.test.ts src/workers/email.worker.reliability.test.ts",
     "prisma:generate": "prisma generate --schema ../../prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema ../../prisma/schema.prisma",
+    "prisma:deploy": "prisma migrate deploy --schema ../../prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema ../../prisma/schema.prisma"
   },
   "prisma": {
     "schema": "../../prisma/schema.prisma"
   },
   "dependencies": {
+    "@bull-board/api": "^6.21.3",
+    "@bull-board/express": "^6.21.3",
+    "@elastic/elasticsearch": "^8.19.2",
     "@prisma/client": "^6.15.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.58.5",
@@ -29,6 +33,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "nodemailer": "^7.0.6",
+    "openid-client": "^6.8.8",
     "zod": "^3.25.76"
   },
   "devDependencies": {

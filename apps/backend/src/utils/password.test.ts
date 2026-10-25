@@ -10,4 +10,8 @@ describe('password helpers', () => {
     assert.equal(await verifyPassword('password123', hash), true);
     assert.equal(await verifyPassword('wrong-password', hash), false);
   });
+
+  it('returns false when the stored hash is missing', async () => {
+    assert.equal(await verifyPassword('password123', null), false);
+  });
 });

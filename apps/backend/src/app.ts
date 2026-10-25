@@ -6,6 +6,7 @@ import { getCorsOrigins } from './config/cors';
 import { env } from './config/env';
 import { errorHandler } from './middleware/error-handler';
 import { notFoundHandler } from './middleware/not-found';
+import { mountQueueDashboard } from './queue/queue-dashboard';
 import { apiRouter } from './routes';
 
 export function createApp() {
@@ -25,6 +26,7 @@ export function createApp() {
   }
 
   app.use(API_PREFIX, apiRouter);
+  mountQueueDashboard(app);
   app.use(notFoundHandler);
   app.use(errorHandler);
 

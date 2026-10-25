@@ -13,6 +13,8 @@ export type PublicEmail = {
   failureReason: string | null;
   campaignId: string | null;
   sequenceIndex: number | null;
+  deferralReason: string | null;
+  smtpSenderAccountId: string | null;
   createdAt: string;
   updatedAt: string;
 };

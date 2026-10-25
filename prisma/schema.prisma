@@ -23,14 +23,72 @@ enum CampaignStatus {
   PARTIAL
 }
 
+enum SmtpAccountKind {
+  ENV
+  CUSTOM
+}
+
 model User {
-  id           String          @id @default(uuid())
-  email        String          @unique
-  passwordHash String
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  emails       Email[]
-  campaigns    EmailCampaign[]
+  id              String              @id @default(uuid())
+  email           String              @unique
+  passwordHash    String?
+  name            String?
+  avatarUrl       String?
+  googleSubject   String?             @unique
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  emails          Email[]
+  campaigns       EmailCampaign[]
+  smtpAccounts    SmtpSenderAccount[]
+  slackConnection SlackConnection?
+}
+
+model EmailSearchOutbox {
+  id        String   @id @default(uuid())
+  emailId   String   @unique
+  email     Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  attempts  Int      @default(0)
+  lastError String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([updatedAt])
+}
+
+model SmtpSenderAccount {
+  id             String          @id @default(uuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label          String
+  kind           SmtpAccountKind @default(CUSTOM)
+  host           String
+  port           Int
+  secure         Boolean         @default(false)
+  username       String
+  passwordCipher String?
+  mailFrom       String
+  hourlyQuota    Int             @default(100)
+  enabled        Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  emails         Email[]
+
+  @@unique([userId, label])
+  @@index([userId])
+}
+
+model SlackConnection {
+  userId                String   @id
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId                String
+  teamName              String?
+  channelId             String?
+  channelName           String?
+  accessTokenCipher     String
+  incomingWebhookCipher String?
+  scope                 String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model EmailCampaign {
@@ -68,11 +126,16 @@ model Email {
   scheduledAt       DateTime
   sentAt            DateTime?
   failureReason     String?
-  providerMessageId String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  providerMessageId   String?
+  smtpSenderAccountId String?
+  smtpSenderAccount   SmtpSenderAccount? @relation(fields: [smtpSenderAccountId], references: [id], onDelete: SetNull)
+  deferralReason      String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  searchOutbox        EmailSearchOutbox?
 
   @@index([userId])
+  @@index([smtpSenderAccountId])
   @@index([status])
   @@index([scheduledAt])
   @@index([userId, status])

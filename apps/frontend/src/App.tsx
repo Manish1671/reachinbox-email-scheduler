@@ -6,8 +6,11 @@ import { AppLayout } from './layouts/AppLayout';
 import { PublicLayout } from './layouts/PublicLayout';
 import { ComposePage } from './pages/ComposePage';
 import { DashboardPage } from './pages/DashboardPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { GoogleCallbackPage } from './pages/GoogleCallbackPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { SearchPage } from './pages/SearchPage';
 
 export function App() {
   return (
@@ -18,6 +21,7 @@ export function App() {
             <Route element={<PublicLayout />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
             </Route>
           </Route>
 
@@ -25,6 +29,8 @@ export function App() {
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/compose" element={<ComposePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/search" element={<SearchPage />} />
             </Route>
           </Route>
 

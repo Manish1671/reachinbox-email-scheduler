@@ -2,6 +2,7 @@ import { EmailStatus, type Email } from '@prisma/client';
 import { FAILURE_REASON_MAX_LENGTH } from '../config/constants';
 import { env } from '../config/env';
 import { prisma } from '../db/prisma';
+import { scheduleEmailSearchIndex } from './email-search-index.service';
 
 export type ClaimResult =
   | { kind: 'claimed'; email: Email }
@@ -45,15 +46,37 @@ export async function markEmailSent(
   emailId: string,
   providerMessageId?: string,
 ): Promise<void> {
-  await prisma.email.updateMany({
+  const updated = await prisma.email.updateMany({
     where: { id: emailId, status: EmailStatus.PROCESSING },
     data: {
       status: EmailStatus.SENT,
       sentAt: new Date(),
       providerMessageId: providerMessageId ?? null,
       failureReason: null,
+      deferralReason: null,
     },
   });
+  if (updated.count > 0) {
+    scheduleEmailSearchIndex(emailId);
+  }
+}
+
+export async function deferQueuedEmail(
+  emailId: string,
+  options: { scheduledAt: Date; deferralReason: string },
+): Promise<void> {
+  const updated = await prisma.email.updateMany({
+    where: { id: emailId, status: { in: [EmailStatus.PROCESSING, EmailStatus.QUEUED] } },
+    data: {
+      status: EmailStatus.QUEUED,
+      scheduledAt: options.scheduledAt,
+      deferralReason: options.deferralReason,
+      failureReason: null,
+    },
+  });
+  if (updated.count > 0) {
+    scheduleEmailSearchIndex(emailId);
+  }
 }
 
 export async function releaseEmailForRetry(emailId: string): Promise<void> {
@@ -87,7 +110,7 @@ export async function releaseStaleProcessingEmail(
 }
 
 export async function markEmailFailed(emailId: string, reason: string): Promise<void> {
-  await prisma.email.updateMany({
+  const updated = await prisma.email.updateMany({
     where: {
       id: emailId,
       status: { in: [EmailStatus.PROCESSING, EmailStatus.QUEUED] },
@@ -97,6 +120,9 @@ export async function markEmailFailed(emailId: string, reason: string): Promise<
       failureReason: sanitizeFailureReason(reason),
     },
   });
+  if (updated.count > 0) {
+    scheduleEmailSearchIndex(emailId);
+  }
 }
 
 export function sanitizeFailureReason(reason: string): string {

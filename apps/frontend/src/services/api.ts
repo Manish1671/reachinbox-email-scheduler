@@ -10,7 +10,11 @@ export const api = axios.create({
   },
 });
 
-const AUTH_ENDPOINTS = new Set(['/api/auth/login', '/api/auth/register']);
+const AUTH_ENDPOINTS = new Set([
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/google/exchange',
+]);
 
 let onUnauthorized: (() => void) | null = null;
 

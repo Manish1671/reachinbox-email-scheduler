@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { useAuth } from '../hooks/useAuth';
+import { openQueueDashboard } from '../services/admin';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-md px-3 py-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
@@ -30,7 +31,30 @@ export function AppLayout() {
             <NavLink to="/compose" className={navClass}>
               Compose
             </NavLink>
-            {user ? <span className="hidden px-3 text-sm text-slate-500 sm:inline">{user.email}</span> : null}
+            <NavLink to="/search" className={navClass}>
+              Search
+            </NavLink>
+            <NavLink to="/settings" className={navClass}>
+              Settings
+            </NavLink>
+            <Button variant="ghost" type="button" onClick={() => void openQueueDashboard()}>
+              Queues
+            </Button>
+            {user ? (
+              <div className="hidden items-center gap-2 px-2 sm:flex">
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt=""
+                    className="h-8 w-8 rounded-full border border-slate-200 object-cover"
+                  />
+                ) : null}
+                <div className="text-sm text-slate-600">
+                  <div className="font-medium text-slate-900">{user.name ?? user.email}</div>
+                  {user.name ? <div className="text-xs">{user.email}</div> : null}
+                </div>
+              </div>
+            ) : null}
             <Button variant="ghost" onClick={handleLogout}>
               Log out
             </Button>

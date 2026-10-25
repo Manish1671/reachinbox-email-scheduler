@@ -7,11 +7,20 @@ export async function createEmail(input: CreateEmailInput): Promise<ScheduledEma
   return response.data.data;
 }
 
-export async function getEmails(status?: EmailStatus): Promise<ScheduledEmail[]> {
+export async function getEmails(
+  options: { status?: EmailStatus; limit?: number } = {},
+): Promise<ScheduledEmail[]> {
   const response = await api.get<ApiSuccess<ScheduledEmail[]>>('/api/emails', {
-    params: status ? { status } : undefined,
+    params: {
+      ...(options.status ? { status: options.status } : {}),
+      ...(options.limit ? { limit: options.limit } : {}),
+    },
   });
   return response.data.data;
+}
+
+export async function getProcessingEmails(): Promise<ScheduledEmail[]> {
+  return getEmails({ status: 'PROCESSING' });
 }
 
 export async function getScheduledEmails(): Promise<ScheduledEmail[]> {
@@ -25,7 +34,7 @@ export async function getSentEmails(): Promise<ScheduledEmail[]> {
 }
 
 export async function getFailedEmails(): Promise<ScheduledEmail[]> {
-  return getEmails('FAILED');
+  return getEmails({ status: 'FAILED' });
 }
 
 export async function getEmail(id: string): Promise<ScheduledEmail> {

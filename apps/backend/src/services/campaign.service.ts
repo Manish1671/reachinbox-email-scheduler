@@ -7,6 +7,7 @@ import { AppError } from '../utils/app-error';
 import { parseRecipientsInput, RecipientParseError } from '../utils/campaign-recipients';
 import { calculateStaggeredScheduledAt } from '../utils/campaign-schedule';
 import { logger } from '../utils/logger';
+import { scheduleCampaignEmailSearchIndex } from './email-search-index.service';
 import {
   deriveCampaignStatusFromEmails,
   toPublicCampaign,
@@ -200,6 +201,8 @@ export async function createCampaign(
     enqueued: enqueueSummary.enqueued,
     enqueueFailed: enqueueSummary.failed,
   });
+
+  void scheduleCampaignEmailSearchIndex(campaignId);
 
   return {
     ...campaign,

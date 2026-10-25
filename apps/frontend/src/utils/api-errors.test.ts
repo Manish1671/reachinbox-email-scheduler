@@ -12,6 +12,11 @@ describe('api error mapping', () => {
     assert.equal(mapApiError(409, 'EMAIL_IN_USE'), 'This email is already registered.');
     assert.equal(mapApiError(401, 'INVALID_CREDENTIALS'), 'Invalid email or password.');
     assert.equal(mapApiError(401), 'Your session has expired. Please log in again.');
+    assert.equal(mapApiError(503, 'SEARCH_UNAVAILABLE'), 'Search is temporarily unavailable. Try the dashboard instead.');
+    assert.equal(
+      mapApiError(409, 'GOOGLE_EMAIL_ALREADY_REGISTERED'),
+      'This email already has a password account. Sign in with email and password.',
+    );
   });
 
   it('does not expose raw network internals for unknown errors', () => {

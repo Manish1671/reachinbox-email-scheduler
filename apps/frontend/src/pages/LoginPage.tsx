@@ -6,7 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getApiErrorMessage } from '../services/api';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,6 +67,25 @@ export function LoginPage() {
           {submitting ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
+
+      <div className="mt-4">
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full"
+          disabled={submitting}
+          onClick={() => {
+            setError(null);
+            setSubmitting(true);
+            void loginWithGoogle().catch((submitError) => {
+              setError(getApiErrorMessage(submitError));
+              setSubmitting(false);
+            });
+          }}
+        >
+          Continue with Google
+        </Button>
+      </div>
 
       <p className="mt-6 text-sm">
         Need an account?{' '}

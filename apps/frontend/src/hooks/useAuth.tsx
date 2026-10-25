@@ -9,7 +9,13 @@ import {
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setUnauthorizedHandler } from '../services/api';
-import { getCurrentUser, loginRequest, registerRequest, type AuthUser } from '../services/auth';
+import {
+  getCurrentUser,
+  loginRequest,
+  registerRequest,
+  startGoogleSignIn,
+  type AuthUser,
+} from '../services/auth';
 import { clearToken, getStoredToken, storeToken } from '../services/tokenStorage';
 
 type AuthContextValue = {
@@ -19,6 +25,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  loginWithGoogle: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -86,6 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.user);
   }, []);
 
+  const loginWithGoogle = useCallback(async () => {
+    const url = await startGoogleSignIn();
+    window.location.assign(url);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -94,8 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      loginWithGoogle,
     }),
-    [user, isInitializing, login, register, logout],
+    [user, isInitializing, login, register, logout, loginWithGoogle],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

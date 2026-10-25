@@ -13,6 +13,8 @@ export function toPublicEmail(email: Email): PublicEmail {
     failureReason: email.failureReason,
     campaignId: email.campaignId,
     sequenceIndex: email.sequenceIndex,
+    deferralReason: email.deferralReason,
+    smtpSenderAccountId: email.smtpSenderAccountId,
     createdAt: email.createdAt.toISOString(),
     updatedAt: email.updatedAt.toISOString(),
   };

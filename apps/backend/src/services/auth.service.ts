@@ -33,6 +33,8 @@ export const authService = {
         select: {
           id: true,
           email: true,
+          name: true,
+          avatarUrl: true,
         },
       });
 
@@ -51,7 +53,7 @@ export const authService = {
       where: { email: input.email },
     });
 
-    if (!user) {
+    if (!user || !user.passwordHash) {
       throw new AppError('INVALID_CREDENTIALS', 'Invalid email or password', 401);
     }
 

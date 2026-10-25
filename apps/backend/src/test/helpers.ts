@@ -55,7 +55,10 @@ export async function apiRequest<T = unknown>(
 
   const response = await fetch(`${baseUrl}${path}`, {
     method,
-    headers,
+    headers: {
+      ...headers,
+      Connection: 'close',
+    },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 

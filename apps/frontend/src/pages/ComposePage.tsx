@@ -1,35 +1,25 @@
 import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
+import { PageHeader } from '../components/PageHeader';
 import { TextArea } from '../components/TextArea';
 import { TextField } from '../components/TextField';
 import { createCampaign } from '../services/campaigns';
 import { createEmail } from '../services/emails';
 import { getApiErrorMessage } from '../utils/api-errors';
 import {
+  countRecipientLines,
+  validateCampaignCompose,
+  validateSingleEmailCompose,
+  type ComposeFieldErrors,
+} from '../utils/compose-validation';
+import {
   defaultScheduleParts,
   formatScheduledAt,
-  isLocalDateTimeInPast,
   toIsoFromLocalDateTime,
 } from '../utils/datetime';
 
-const RECIPIENT_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 type ComposeMode = 'single' | 'campaign';
-
-type SingleFieldErrors = {
-  recipient?: string;
-  subject?: string;
-  body?: string;
-  date?: string;
-  time?: string;
-};
-
-type CampaignFieldErrors = SingleFieldErrors & {
-  recipients?: string;
-  minDelaySeconds?: string;
-  hourlyQuota?: string;
-};
 
 function createIdempotencyKey(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -52,64 +42,18 @@ export function ComposePage() {
   const [time, setTime] = useState(defaults.time);
   const [minDelaySeconds, setMinDelaySeconds] = useState('5');
   const [hourlyQuota, setHourlyQuota] = useState('100');
-  const [fieldErrors, setFieldErrors] = useState<CampaignFieldErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<ComposeFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [formNotice, setFormNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const recipientHint = useMemo(() => {
     if (!recipients.trim()) {
-      return 'Paste addresses or upload a CSV/text file. The server validates and deduplicates recipients.';
+      return 'Paste addresses or upload a CSV/text file. The server validates, deduplicates, and returns the final recipient count.';
     }
-    const lineCount = recipients.split(/\r?\n/).filter((line) => line.trim().length > 0).length;
-    return `${lineCount} non-empty line(s) in the upload. Final recipient count is determined by the server.`;
+    const lineCount = countRecipientLines(recipients);
+    return `${lineCount} non-empty line(s) in the editor. The server determines the final recipient count after validation.`;
   }, [recipients]);
-
-  function validateSharedFields(): CampaignFieldErrors {
-    const next: CampaignFieldErrors = {};
-    if (!subject.trim()) {
-      next.subject = 'Subject is required.';
-    }
-    if (!body.trim()) {
-      next.body = 'Body is required.';
-    }
-    if (!date) {
-      next.date = 'Date is required.';
-    }
-    if (!time) {
-      next.time = 'Time is required.';
-    }
-    if (date && time && isLocalDateTimeInPast(date, time)) {
-      next.time = 'Please choose a future time.';
-    }
-    return next;
-  }
-
-  function validateSingle(): SingleFieldErrors {
-    const next = validateSharedFields();
-    if (!recipient.trim()) {
-      next.recipient = 'Recipient is required.';
-    } else if (!RECIPIENT_PATTERN.test(recipient.trim())) {
-      next.recipient = 'Enter a valid email address.';
-    }
-    return next;
-  }
-
-  function validateCampaign(): CampaignFieldErrors {
-    const next = validateSharedFields();
-    if (!recipients.trim()) {
-      next.recipients = 'Add at least one recipient line or upload a file.';
-    }
-    const delay = Number(minDelaySeconds);
-    if (!Number.isFinite(delay) || delay < 0) {
-      next.minDelaySeconds = 'Enter a non-negative delay in seconds.';
-    }
-    const quota = Number(hourlyQuota);
-    if (!Number.isInteger(quota) || quota < 1) {
-      next.hourlyQuota = 'Hourly quota must be at least 1.';
-    }
-    return next;
-  }
 
   async function handleRecipientsFile(event: ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = event.target.files?.[0];
@@ -128,7 +72,18 @@ export function ComposePage() {
       return;
     }
 
-    const nextErrors = mode === 'single' ? validateSingle() : validateCampaign();
+    const nextErrors =
+      mode === 'single'
+        ? validateSingleEmailCompose({ recipient, subject, body, date, time })
+        : validateCampaignCompose({
+            recipients,
+            subject,
+            body,
+            date,
+            time,
+            minDelaySeconds,
+            hourlyQuota,
+          });
     setFieldErrors(nextErrors);
     setFormError(null);
     setFormNotice(null);
@@ -165,15 +120,14 @@ export function ComposePage() {
         idempotencyKey: campaignIdempotencyKey.current,
       });
 
-      const warning =
-        result.invalidLines && result.invalidLines.length > 0
-          ? ` ${result.invalidLines.length} line(s) were skipped as invalid.`
-          : '';
+      campaignIdempotencyKey.current = createIdempotencyKey();
 
       navigate('/dashboard', {
         replace: true,
         state: {
-          notice: `Campaign scheduled for ${result.recipientCount} recipient(s) starting ${formatScheduledAt(result.startAt)}.${warning}`,
+          notice: `Campaign scheduled for ${result.recipientCount} recipient(s) starting ${formatScheduledAt(result.startAt)}.`,
+          invalidLines: result.invalidLines,
+          idempotentReplay: result.idempotentReplay,
         },
       });
     } catch (submitError) {
@@ -185,15 +139,16 @@ export function ComposePage() {
 
   return (
     <section className="max-w-2xl">
-      <h1 className="text-2xl font-semibold text-slate-900">Compose</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        Schedule a single email or upload a recipient list for a staggered campaign. Times use your local timezone and
-        are stored as UTC on the server.
-      </p>
+      <PageHeader
+        title="Compose"
+        description="Schedule a single email or upload a recipient list for a staggered campaign. Times use your local timezone and are stored as UTC on the server."
+      />
 
-      <div className="mt-6 inline-flex rounded-lg border border-slate-200 bg-white p-1">
+      <div className="mt-6 inline-flex rounded-lg border border-slate-200 bg-white p-1" role="tablist" aria-label="Compose mode">
         <button
           type="button"
+          role="tab"
+          aria-selected={mode === 'single'}
           className={`rounded-md px-3 py-1.5 text-sm font-medium ${
             mode === 'single' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
           }`}
@@ -203,6 +158,8 @@ export function ComposePage() {
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={mode === 'campaign'}
           className={`rounded-md px-3 py-1.5 text-sm font-medium ${
             mode === 'campaign' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
           }`}
@@ -269,8 +226,8 @@ export function ComposePage() {
               />
             </div>
             <p className="text-xs text-slate-500">
-              Hourly quota is saved with the campaign and will be enforced in a later phase. Sends are staggered by the
-              minimum delay from the campaign start time.
+              Sends are staggered from the campaign start time using the minimum delay. Hourly quota is enforced per
+              sender during delivery.
             </p>
           </>
         )}
@@ -315,12 +272,12 @@ export function ComposePage() {
         ) : null}
 
         {formError ? (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
             {formError}
           </p>
         ) : null}
 
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting} aria-busy={submitting}>
           {submitting
             ? mode === 'single'
               ? 'Scheduling…'

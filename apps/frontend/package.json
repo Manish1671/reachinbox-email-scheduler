@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.app.json --noEmit && vite build",
     "preview": "vite preview",
     "lint": "tsc -p tsconfig.app.json --noEmit",
-    "test": "tsx --test --test-force-exit src/utils/datetime.test.ts src/utils/api-errors.test.ts"
+    "test": "tsx --test --test-force-exit src/utils/datetime.test.ts src/utils/api-errors.test.ts src/utils/compose-validation.test.ts src/utils/search-state.test.ts src/pages/SearchPage.test.tsx"
   },
   "dependencies": {
     "axios": "^1.7.9",
